@@ -752,6 +752,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<!-- ═══ MODAL: HISTORIAL PROVEEDOR ═══ -->
+<div class="modal-overlay" id="modal-proveedor">
+  <div class="modal" style="max-width:900px;width:95vw">
+    <div class="modal-hdr">
+      <h3 id="modal-prov-title">Historial Proveedor</h3>
+      <button class="modal-close" onclick="closeModal('modal-proveedor')">✕</button>
+    </div>
+    <div id="modal-prov-stats"></div>
+    <div id="modal-prov-body"></div>
+  </div>
+</div>
+
 <!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
@@ -985,6 +997,7 @@ function renderFacturas() {
   const forma   = document.getElementById('filter-forma').value;
   const hoy     = new Date();
 
+  // Sin filtro de estado por defecto = muestra TODAS las facturas
   let filtered = allFacturas.filter(f => {
     if (prov   && f.proveedor !== prov)   return false;
     if (estado && f.estado !== estado)    return false;
@@ -993,8 +1006,10 @@ function renderFacturas() {
     return true;
   });
 
+  const totalPend = filtered.filter(f => f.estado !== 'PAGADA').length;
+  const totalPag  = filtered.filter(f => f.estado === 'PAGADA').length;
   document.getElementById('facturas-count').textContent =
-    `${filtered.length} de ${allFacturas.length} facturas`;
+    `${filtered.length} facturas — ${totalPend} pendientes · ${totalPag} pagadas`;
 
   if (!filtered.length) {
     document.getElementById('tbody-facturas').innerHTML =
@@ -1107,15 +1122,26 @@ function renderProveedores() {
   const rows = Object.entries(data)
     .filter(([,d]) => d.total > 0)
     .sort((a,b) => b[1].deuda - a[1].deuda)
-    .map(([prov, d]) => `<tr>
-      <td><b>${prov}</b></td>
+    .map(([prov, d]) => {
+      const initials = prov.substring(0,2);
+      return `<tr style="cursor:pointer" onclick="openProveedorDetalle('${prov}')">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--accent2);flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-weight:700">${prov}</div>
+            <div style="font-size:.7rem;color:var(--text2)">${d.total} factura${d.total!==1?'s':''}</div>
+          </div>
+        </div>
+      </td>
       <td class="mono">${d.total}</td>
-      <td>${d.pend > 0 ? `<span class="badge badge-yellow">${d.pend}</span>` : '—'}</td>
-      <td>${d.pag  > 0 ? `<span class="badge badge-green">${d.pag}</span>` : '—'}</td>
-      <td class="mono" style="color:${d.deuda>0?'var(--orange)':'var(--text2)'}">${d.deuda > 0 ? fmt(d.deuda) : '—'}</td>
+      <td>${d.pend > 0 ? '<span class="badge badge-yellow">'+d.pend+'</span>' : '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${d.pag  > 0 ? '<span class="badge badge-green">'+d.pag+'</span>'  : '<span style="color:var(--text3)">—</span>'}</td>
+      <td class="mono" style="color:${d.deuda>0?'var(--orange)':'var(--text3)'}">${d.deuda > 0 ? fmt(d.deuda) : '—'}</td>
       <td class="mono" style="color:var(--green2)">${d.pagado > 0 ? fmt(d.pagado) : '—'}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="filterByProv('${prov}')">Ver facturas</button></td>
-    </tr>`).join('');
+      <td onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openProveedorDetalle('${prov}')">📂 Ver historial</button></td>
+    </tr>`;
+    }).join('');
 
   document.getElementById('tbody-proveedores').innerHTML = rows ||
     `<tr><td colspan="7"><div class="empty"><p>Sin datos</p></div></td></tr>`;
@@ -1126,6 +1152,59 @@ function filterByProv(prov) {
   document.getElementById('filter-estado').value = '';
   goTo('facturas');
   renderFacturas();
+}
+
+function openProveedorDetalle(prov) {
+  const hoy = new Date();
+  const facturas = allFacturas
+    .filter(f => f.proveedor === prov)
+    .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+  const deudaTotal  = facturas.filter(f=>f.estado!=='PAGADA').reduce((s,f)=>s+calcSaldo(f),0);
+  const pagadoTotal = facturas.filter(f=>f.estado==='PAGADA').reduce((s,f)=>s+f.monto,0);
+  const countPend   = facturas.filter(f=>f.estado!=='PAGADA').length;
+  const countPag    = facturas.filter(f=>f.estado==='PAGADA').length;
+
+  const rows = facturas.map(f => {
+    const dias  = f.fecha ? Math.floor((hoy - new Date(f.fecha)) / 86400000) : 0;
+    const saldo = calcSaldo(f);
+    const diasBadge = f.estado !== 'PAGADA'
+      ? (dias>30?'<span class="badge badge-red">'+dias+'d</span>':dias>7?'<span class="badge badge-orange">'+dias+'d</span>':'<span class="badge badge-gray">'+dias+'d</span>')
+      : '—';
+    return '<tr>'
+      + '<td class="mono" style="font-weight:700">'+f.nroFactura+'</td>'
+      + '<td>'+fmtDate(f.fecha)+'</td>'
+      + '<td class="mono">'+fmt(f.monto)+'</td>'
+      + '<td class="mono" style="color:var(--green2)">'+(f.totalAbonado>0?fmt(f.totalAbonado):'—')+'</td>'
+      + '<td class="mono" style="color:'+(saldo>0&&f.estado!=='PAGADA'?'var(--orange)':'var(--text3)')+')">'+(f.estado!=='PAGADA'&&saldo>0?fmt(saldo):'—')+'</td>'
+      + '<td>'+estadoBadge(f.estado,f.totalAbonado)+'</td>'
+      + '<td>'+(f.formaPago?'<span class="badge badge-blue">'+f.formaPago+'</span>':'—')+'</td>'
+      + '<td>'+fmtDate(f.fechaPago)+'</td>'
+      + '<td>'+diasBadge+'</td>'
+      + '<td><div class="actions">'
+      + (f.estado!=='PAGADA'?'<button class="act-btn pay" onclick="closeModal(\'modal-proveedor\');setTimeout(()=>openPago('+f.rowIndex+'),100)">💰 Pagar</button>':'')
+      + '<button class="act-btn" onclick="closeModal(\'modal-proveedor\');setTimeout(()=>openEdit('+f.rowIndex+'),100)">✏️</button>'
+      + '</div></td>'
+      + '</tr>';
+  }).join('');
+
+  document.getElementById('modal-prov-title').textContent = '📂 ' + prov;
+  document.getElementById('modal-prov-stats').innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Facturas</div><div style="font-size:1.5rem;font-weight:700;margin-top:4px">'+facturas.length+'</div></div>'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Pendientes</div><div style="font-size:1.5rem;font-weight:700;color:var(--orange);margin-top:4px">'+countPend+'</div></div>'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Deuda total</div><div style="font-size:.95rem;font-weight:700;color:var(--orange);margin-top:4px;font-family:var(--mono)">'+fmt(deudaTotal)+'</div></div>'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Total pagado</div><div style="font-size:.95rem;font-weight:700;color:var(--green2);margin-top:4px;font-family:var(--mono)">'+fmt(pagadoTotal)+'</div></div>'
+    + '</div>';
+
+  document.getElementById('modal-prov-body').innerHTML = facturas.length
+    ? '<div class="table-wrap"><table><thead><tr>'
+      + '<th>N° Factura</th><th>Fecha</th><th>Monto</th><th>Abonado</th>'
+      + '<th>Saldo</th><th>Estado</th><th>Forma Pago</th><th>Fecha Pago</th><th>Días</th><th></th>'
+      + '</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    : '<div class="empty"><div class="ei">📋</div><p>Sin facturas para este proveedor</p></div>';
+
+  document.getElementById('modal-proveedor').classList.add('open');
 }
 
 // ── Helpers visuales ─────────────────────────────────────────
