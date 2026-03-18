@@ -387,6 +387,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <span class="icon">📋</span> Facturas
       <span class="nav-badge" id="badge-facturas">0</span>
     </div>
+    <div class="nav-item" onclick="goTo('pendientes')">
+      <span class="icon">⏳</span> Pendientes
+      <span class="nav-badge" id="badge-pendientes">0</span>
+    </div>
     <div class="nav-item" onclick="goTo('alertas')">
       <span class="icon">🔔</span> Alertas +30 días
       <span class="nav-badge" id="badge-alertas">0</span>
@@ -508,6 +512,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           </thead>
           <tbody id="tbody-facturas">
             <tr><td colspan="10"><div class="loading"><div class="spinner"></div> Cargando datos...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PENDIENTES ═══ -->
+    <div class="section" id="section-pendientes">
+      <div class="section-hdr">
+        <div>
+          <h2>⏳ Facturas Pendientes de Pago</h2>
+          <p id="pendientes-count">Cargando...</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-factura')">+ Nueva Factura</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>N° Factura</th>
+              <th>Fecha</th>
+              <th>Monto</th>
+              <th>Saldo</th>
+              <th>Estado</th>
+              <th>Días</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-pendientes">
+            <tr><td colspan="8"><div class="loading"><div class="spinner"></div> Cargando...</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -736,10 +770,10 @@ const PROVEEDORES = [
   'FORNER','ABC','CUCCO','VH','FERCAM','CRISTALRIOJA'
 ];
 
-// ── Navigation ───────────────────────────────────────────────
 const titles = {
-  dashboard:'Dashboard', facturas:'Facturas', alertas:'Alertas +30 días',
-  parciales:'Pagos Parciales', proveedores:'Proveedores', config:'Configuración'
+  dashboard:'Dashboard', facturas:'Facturas', pendientes:'Facturas Pendientes',
+  alertas:'Alertas +30 días', parciales:'Pagos Parciales',
+  proveedores:'Proveedores', config:'Configuración'
 };
 
 function goTo(section) {
@@ -750,28 +784,27 @@ function goTo(section) {
   event.currentTarget.classList.add('active');
   document.querySelector('.sidebar').classList.remove('open');
   if (section === 'facturas')    renderFacturas();
+  if (section === 'pendientes')  renderPendientes();
   if (section === 'alertas')     renderAlertas();
   if (section === 'parciales')   renderParciales();
   if (section === 'proveedores') renderProveedores();
 }
 
-// ── API ──────────────────────────────────────────────────────
-async function api(params) {
+// ── API — TODO via GET para evitar CORS con Apps Script ──────
+async function apiCall(params) {
   if (!API_URL) return null;
-  const url = API_URL + '?' + new URLSearchParams(params);
-  const res = await fetch(url);
-  return res.json();
+  try {
+    const url = API_URL + '?' + new URLSearchParams(params);
+    const res = await fetch(url, { redirect: 'follow' });
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch(e) { return { error: 'Respuesta no es JSON: ' + text.substring(0, 200) }; }
+  } catch(err) {
+    return { error: 'Error de red: ' + err.message };
+  }
 }
-
-async function apiPost(body) {
-  if (!API_URL) return null;
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
+async function api(params)    { return apiCall(params); }
+async function apiPost(body)  { return apiCall(body); } // POST → GET fix
 
 // ── Load Data ────────────────────────────────────────────────
 async function loadData() {
@@ -782,13 +815,13 @@ async function loadData() {
       loadDemoData();
       return;
     }
-    const data = await api({ action: 'getFacturas' });
+    const data = await apiCall({ action: 'getFacturas' });
     if (data && data.facturas) {
       allFacturas = data.facturas;
       setSyncStatus('Sincronizado ✓', true);
       document.getElementById('conn-status').textContent = '✅ Conexión exitosa';
     } else {
-      throw new Error('Respuesta inválida');
+      throw new Error(data?.error || 'Sin datos');
     }
   } catch(e) {
     setSyncStatus('Error de conexión', false);
@@ -804,15 +837,13 @@ function setSyncStatus(text, ok) {
   document.getElementById('sync-dot').style.background = ok ? 'var(--green2)' : 'var(--orange)';
 }
 
-// ── Demo Data (cuando no hay API conectada) ──────────────────
 function loadDemoData() {
   allFacturas = [
-    {rowIndex:2,nroFactura:'2344',fecha:'2026-02-24',monto:2750000,estado:'PENDIENTE',fechaPago:'',proveedor:'MUNDOCAMIONES',formaPago:'',montoOriginal:2750000,totalAbonado:0,observaciones:''},
-    {rowIndex:3,nroFactura:'2347',fecha:'2026-02-28',monto:5438000,estado:'PENDIENTE',fechaPago:'',proveedor:'MUNDOCAMIONES',formaPago:'',montoOriginal:5438000,totalAbonado:0,observaciones:''},
-    {rowIndex:4,nroFactura:'2352',fecha:'2026-03-06',monto:4930000,estado:'PENDIENTE',fechaPago:'',proveedor:'MUNDOCAMIONES',formaPago:'TRANSFERENCIA',montoOriginal:4930000,totalAbonado:0,observaciones:''},
-    {rowIndex:5,nroFactura:'00-60',fecha:'2026-01-22',monto:7030000,estado:'PENDIENTE',fechaPago:'',proveedor:'FRANGET',formaPago:'',montoOriginal:7030000,totalAbonado:3000000,observaciones:'Parcial $3.000.000'},
-    {rowIndex:6,nroFactura:'0-062',fecha:'2026-02-19',monto:1920000,estado:'PENDIENTE',fechaPago:'',proveedor:'FRANGET',formaPago:'',montoOriginal:1920000,totalAbonado:0,observaciones:''},
-    {rowIndex:7,nroFactura:'0-064',fecha:'2026-02-26',monto:1490000,estado:'PENDIENTE',fechaPago:'',proveedor:'FRANGET',formaPago:'',montoOriginal:1490000,totalAbonado:0,observaciones:''},
+    {rowIndex:3,nroFactura:'2344',fecha:'2026-02-24',monto:2750000,estado:'PENDIENTE',fechaPago:'',proveedor:'MUNDOCAMIONES',formaPago:'',montoOriginal:2750000,totalAbonado:0,observaciones:''},
+    {rowIndex:4,nroFactura:'2347',fecha:'2026-02-28',monto:5438000,estado:'PENDIENTE',fechaPago:'',proveedor:'MUNDOCAMIONES',formaPago:'',montoOriginal:5438000,totalAbonado:0,observaciones:''},
+    {rowIndex:5,nroFactura:'2352',fecha:'2026-03-06',monto:4930000,estado:'PENDIENTE',fechaPago:'TRANSFERENCIA',proveedor:'MUNDOCAMIONES',formaPago:'TRANSFERENCIA',montoOriginal:4930000,totalAbonado:0,observaciones:''},
+    {rowIndex:6,nroFactura:'00-60',fecha:'2026-01-22',monto:7030000,estado:'PENDIENTE',fechaPago:'',proveedor:'FRANGET',formaPago:'',montoOriginal:7030000,totalAbonado:3000000,observaciones:'Parcial $3.000.000'},
+    {rowIndex:7,nroFactura:'0-062',fecha:'2026-02-19',monto:1920000,estado:'PENDIENTE',fechaPago:'',proveedor:'FRANGET',formaPago:'',montoOriginal:1920000,totalAbonado:0,observaciones:''},
     {rowIndex:8,nroFactura:'2930',fecha:'2026-01-15',monto:1309050,estado:'PENDIENTE',fechaPago:'',proveedor:'BOSETTI',formaPago:'',montoOriginal:1309050,totalAbonado:0,observaciones:''},
     {rowIndex:9,nroFactura:'77457',fecha:'2026-02-01',monto:4033850,estado:'PENDIENTE',fechaPago:'',proveedor:'BOSETTI',formaPago:'',montoOriginal:4033850,totalAbonado:0,observaciones:''},
     {rowIndex:10,nroFactura:'00-19',fecha:'2026-02-10',monto:2063361,estado:'PENDIENTE',fechaPago:'',proveedor:'CASTELLANOS',formaPago:'',montoOriginal:2063361,totalAbonado:0,observaciones:''},
@@ -835,17 +866,16 @@ function updateDashboard() {
   const urgentes = [];
 
   allFacturas.forEach(f => {
-    const saldo = f.montoOriginal > 0 ? (f.montoOriginal - f.totalAbonado) : f.monto;
-    const monto = saldo > 0 ? saldo : f.monto;
+    const saldo = calcSaldo(f);
     if (f.estado === 'PAGADA') {
       totalPag += f.monto; countPag++;
     } else {
-      totalPend += monto; countPend++;
+      totalPend += saldo; countPend++;
       if (!porProv[f.proveedor]) porProv[f.proveedor] = 0;
-      porProv[f.proveedor] += monto;
+      porProv[f.proveedor] += saldo;
       if (f.fecha) {
         const dias = Math.floor((hoy - new Date(f.fecha)) / 86400000);
-        if (dias > 0) urgentes.push({...f, dias, saldo: monto});
+        if (dias > 0) urgentes.push({...f, dias, saldo});
       }
     }
   });
@@ -857,6 +887,7 @@ function updateDashboard() {
   document.getElementById('stat-count-pend').textContent = countPend + ' facturas pendientes';
   document.getElementById('stat-count-pag').textContent  = countPag + ' facturas pagadas';
   document.getElementById('badge-facturas').textContent  = countPend;
+  document.getElementById('badge-pendientes').textContent = countPend;
   document.getElementById('badge-alertas').textContent   = urgentes.filter(f=>f.dias>30).length;
   document.getElementById('badge-parciales').textContent = allFacturas.filter(f=>f.estado!=='PAGADA'&&f.totalAbonado>0).length;
 
@@ -872,7 +903,6 @@ function updateDashboard() {
     '<div class="empty"><div class="ei">🎉</div><p>Sin deuda pendiente</p></div>';
   document.getElementById('dash-proveedores').innerHTML = provHtml;
 
-  // Urgentes
   urgentes.sort((a,b) => b.dias - a.dias);
   const urgHtml = urgentes.slice(0,6).map(f => `
     <div class="urgente-item">
@@ -889,16 +919,65 @@ function updateDashboard() {
   document.getElementById('dash-urgentes').innerHTML = urgHtml;
 }
 
-// ── Facturas ─────────────────────────────────────────────────
+// ── Calcular saldo ────────────────────────────────────────────
+function calcSaldo(f) {
+  if (f.estado === 'PAGADA') return 0;
+  const base = f.montoOriginal > 0 ? f.montoOriginal : f.monto;
+  const saldo = base - (f.totalAbonado || 0);
+  return saldo > 0 ? saldo : f.monto;
+}
+
+// ── Filtros ───────────────────────────────────────────────────
 function populateFilters() {
-  const sel = document.getElementById('filter-proveedor');
-  const fSel = document.getElementById('f-proveedor');
+  const selFilt = document.getElementById('filter-proveedor');
+  const selForm = document.getElementById('f-proveedor');
+  selFilt.innerHTML = '<option value="">Todos los proveedores</option>';
+  selForm.innerHTML = '<option value="">Seleccioná...</option>';
   PROVEEDORES.forEach(p => {
-    sel.innerHTML += `<option value="${p}">${p}</option>`;
-    fSel.innerHTML += `<option value="${p}">${p}</option>`;
+    selFilt.innerHTML += `<option value="${p}">${p}</option>`;
+    selForm.innerHTML += `<option value="${p}">${p}</option>`;
   });
 }
 
+// ── Facturas Pendientes ───────────────────────────────────────
+function renderPendientes() {
+  const hoy = new Date();
+  const pend = allFacturas
+    .filter(f => f.estado !== 'PAGADA')
+    .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+
+  document.getElementById('pendientes-count').textContent =
+    `${pend.length} facturas pendientes de pago`;
+
+  if (!pend.length) {
+    document.getElementById('tbody-pendientes').innerHTML =
+      `<tr><td colspan="8"><div class="empty"><div class="ei">✅</div><p>¡Sin facturas pendientes!</p></div></td></tr>`;
+    return;
+  }
+
+  document.getElementById('tbody-pendientes').innerHTML = pend.map(f => {
+    const dias  = f.fecha ? Math.floor((hoy - new Date(f.fecha)) / 86400000) : 0;
+    const saldo = calcSaldo(f);
+    const diasCls = dias > 30 ? 'badge-red' : dias > 7 ? 'badge-orange' : 'badge-yellow';
+    return `<tr>
+      <td><b>${f.proveedor}</b></td>
+      <td class="mono">${f.nroFactura}</td>
+      <td>${fmtDate(f.fecha)}</td>
+      <td class="mono">${fmt(f.monto)}</td>
+      <td class="mono" style="color:var(--orange)">${fmt(saldo)}</td>
+      <td>${estadoBadge(f.estado, f.totalAbonado)}</td>
+      <td><span class="badge ${diasCls}">${dias} días</span></td>
+      <td>
+        <div class="actions">
+          <button class="act-btn pay" onclick="openPago(${f.rowIndex})">💰 Pagar</button>
+          <button class="act-btn" onclick="openEdit(${f.rowIndex})">✏️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Facturas (todas) ──────────────────────────────────────────
 function renderFacturas() {
   const search  = document.getElementById('search-facturas').value.toLowerCase();
   const prov    = document.getElementById('filter-proveedor').value;
@@ -907,9 +986,9 @@ function renderFacturas() {
   const hoy     = new Date();
 
   let filtered = allFacturas.filter(f => {
-    if (prov   && f.proveedor !== prov)              return false;
-    if (estado && f.estado !== estado)               return false;
-    if (forma  && f.formaPago !== forma)             return false;
+    if (prov   && f.proveedor !== prov)   return false;
+    if (estado && f.estado !== estado)    return false;
+    if (forma  && f.formaPago !== forma)  return false;
     if (search && !`${f.nroFactura} ${f.proveedor} ${f.observaciones}`.toLowerCase().includes(search)) return false;
     return true;
   });
@@ -924,11 +1003,13 @@ function renderFacturas() {
   }
 
   document.getElementById('tbody-facturas').innerHTML = filtered.map(f => {
-    const dias = f.fecha ? Math.floor((hoy - new Date(f.fecha)) / 86400000) : 0;
-    const saldo = f.montoOriginal > 0 ? (f.montoOriginal - f.totalAbonado) : f.monto;
-    const diasBadge = dias > 30 ? `<span class="badge badge-red">${dias}d</span>`
-      : dias > 7 ? `<span class="badge badge-orange">${dias}d</span>`
-      : `<span class="badge badge-gray">${dias}d</span>`;
+    const dias  = f.fecha ? Math.floor((hoy - new Date(f.fecha)) / 86400000) : 0;
+    const saldo = calcSaldo(f);
+    const diasBadge = f.estado !== 'PAGADA'
+      ? (dias > 30 ? `<span class="badge badge-red">${dias}d</span>`
+        : dias > 7 ? `<span class="badge badge-orange">${dias}d</span>`
+        : `<span class="badge badge-gray">${dias}d</span>`)
+      : '—';
     return `<tr>
       <td><b>${f.proveedor}</b></td>
       <td class="mono">${f.nroFactura}</td>
@@ -938,7 +1019,7 @@ function renderFacturas() {
       <td class="mono">${f.estado !== 'PAGADA' && saldo > 0 ? fmt(saldo) : '—'}</td>
       <td>${estadoBadge(f.estado, f.totalAbonado)}</td>
       <td>${f.formaPago ? `<span class="badge badge-blue">${f.formaPago}</span>` : '—'}</td>
-      <td>${f.estado !== 'PAGADA' ? diasBadge : '—'}</td>
+      <td>${diasBadge}</td>
       <td>
         <div class="actions">
           ${f.estado !== 'PAGADA' ? `<button class="act-btn pay" onclick="openPago(${f.rowIndex})">💰 Pagar</button>` : ''}
@@ -968,10 +1049,9 @@ function renderAlertas() {
   }
 
   document.getElementById('lista-alertas').innerHTML = vencidas.map(f => {
-    const dias = Math.floor((hoy - new Date(f.fecha)) / 86400000);
-    const saldo = f.montoOriginal > 0 ? (f.montoOriginal - f.totalAbonado) : f.monto;
-    const cls = dias > 60 ? 'critical' : 'warning';
-    return `<div class="alert-card ${cls}">
+    const dias  = Math.floor((hoy - new Date(f.fecha)) / 86400000);
+    const saldo = calcSaldo(f);
+    return `<div class="alert-card ${dias > 60 ? 'critical' : 'warning'}">
       <div class="alert-icon">${dias > 60 ? '🔴' : '🟠'}</div>
       <div class="alert-info">
         <div class="alert-prov">${f.proveedor}</div>
@@ -988,11 +1068,8 @@ function renderAlertas() {
 
 // ── Parciales ────────────────────────────────────────────────
 function renderParciales() {
-  const parciales = allFacturas.filter(f =>
-    f.estado !== 'PAGADA' && f.totalAbonado > 0
-  );
-  document.getElementById('parciales-count').textContent =
-    `${parciales.length} factura(s) con pago parcial`;
+  const parciales = allFacturas.filter(f => f.estado !== 'PAGADA' && f.totalAbonado > 0);
+  document.getElementById('parciales-count').textContent = `${parciales.length} factura(s) con pago parcial`;
 
   if (!parciales.length) {
     document.getElementById('tbody-parciales').innerHTML =
@@ -1001,8 +1078,8 @@ function renderParciales() {
   }
 
   document.getElementById('tbody-parciales').innerHTML = parciales.map(f => {
-    const saldo = f.montoOriginal - f.totalAbonado;
-    const pct = f.montoOriginal > 0 ? ((f.totalAbonado / f.montoOriginal) * 100).toFixed(1) : 0;
+    const saldo = calcSaldo(f);
+    const pct   = f.montoOriginal > 0 ? ((f.totalAbonado / f.montoOriginal) * 100).toFixed(1) : 0;
     return `<tr>
       <td><b>${f.proveedor}</b></td>
       <td class="mono">${f.nroFactura}</td>
@@ -1011,7 +1088,7 @@ function renderParciales() {
       <td class="mono" style="color:var(--orange)">${fmt(saldo)}</td>
       <td><span class="badge badge-orange">${pct}%</span></td>
       <td style="color:var(--text2);font-size:.78rem">${f.observaciones || '—'}</td>
-      <td><button class="btn btn-success btn-sm" onclick="openPago(${f.rowIndex})">💰 Completar pago</button></td>
+      <td><button class="btn btn-success btn-sm" onclick="openPago(${f.rowIndex})">💰 Completar</button></td>
     </tr>`;
   }).join('');
 }
@@ -1024,7 +1101,7 @@ function renderProveedores() {
     if (!data[f.proveedor]) data[f.proveedor] = {total:0,pend:0,pag:0,deuda:0,pagado:0};
     data[f.proveedor].total++;
     if (f.estado === 'PAGADA') { data[f.proveedor].pag++; data[f.proveedor].pagado += f.monto; }
-    else { data[f.proveedor].pend++; data[f.proveedor].deuda += f.monto - f.totalAbonado; }
+    else { data[f.proveedor].pend++; data[f.proveedor].deuda += calcSaldo(f); }
   });
 
   const rows = Object.entries(data)
@@ -1034,7 +1111,7 @@ function renderProveedores() {
       <td><b>${prov}</b></td>
       <td class="mono">${d.total}</td>
       <td>${d.pend > 0 ? `<span class="badge badge-yellow">${d.pend}</span>` : '—'}</td>
-      <td>${d.pag > 0 ? `<span class="badge badge-green">${d.pag}</span>` : '—'}</td>
+      <td>${d.pag  > 0 ? `<span class="badge badge-green">${d.pag}</span>` : '—'}</td>
       <td class="mono" style="color:${d.deuda>0?'var(--orange)':'var(--text2)'}">${d.deuda > 0 ? fmt(d.deuda) : '—'}</td>
       <td class="mono" style="color:var(--green2)">${d.pagado > 0 ? fmt(d.pagado) : '—'}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="filterByProv('${prov}')">Ver facturas</button></td>
@@ -1058,7 +1135,7 @@ function estadoBadge(estado, abonado) {
   return `<span class="badge badge-orange">⏳ PENDIENTE</span>`;
 }
 function fmt(n) {
-  if (!n) return '$0';
+  if (!n && n !== 0) return '$0';
   return '$' + Number(n).toLocaleString('es-AR', {maximumFractionDigits:0});
 }
 function fmtDate(d) {
@@ -1068,58 +1145,53 @@ function fmtDate(d) {
   return d;
 }
 
-// ── Modal helpers ────────────────────────────────────────────
+// ── Modales ───────────────────────────────────────────────────
 function openModal(id) {
   document.getElementById(id).classList.add('open');
   if (id === 'modal-factura' && !editRowIndex) resetForm();
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  if (id === 'modal-factura') { editRowIndex = null; }
-  if (id === 'modal-pago')    { pagoRowIndex = null; }
+  if (id === 'modal-factura') editRowIndex = null;
+  if (id === 'modal-pago')    pagoRowIndex = null;
 }
-
 function resetForm() {
   document.getElementById('form-factura').reset();
   document.getElementById('modal-factura-title').textContent = '+ Nueva Factura';
-  document.getElementById('btn-submit-factura').textContent = '💾 Guardar';
+  document.getElementById('btn-submit-factura').textContent  = '💾 Guardar';
   document.getElementById('f-estado').value = 'PENDIENTE';
+  document.getElementById('f-fecha').value  = new Date().toISOString().split('T')[0];
   togglePagoFields();
-  // set today's date
-  document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
 }
-
 function togglePagoFields() {
   const esPagada = document.getElementById('f-estado').value === 'PAGADA';
   document.getElementById('f-group-fecha-pago').style.display = esPagada ? 'flex' : 'none';
 }
-
 function openEdit(rowIndex) {
   const f = allFacturas.find(x => x.rowIndex === rowIndex);
   if (!f) return;
   editRowIndex = rowIndex;
   document.getElementById('modal-factura-title').textContent = '✏️ Editar Factura';
-  document.getElementById('btn-submit-factura').textContent = '💾 Actualizar';
-  document.getElementById('f-proveedor').value = f.proveedor;
-  document.getElementById('f-nro').value = f.nroFactura;
-  document.getElementById('f-fecha').value = f.fecha;
-  document.getElementById('f-monto').value = f.monto;
-  document.getElementById('f-estado').value = f.estado;
-  document.getElementById('f-forma').value = f.formaPago || '';
+  document.getElementById('btn-submit-factura').textContent  = '💾 Actualizar';
+  document.getElementById('f-proveedor').value  = f.proveedor;
+  document.getElementById('f-nro').value        = f.nroFactura;
+  document.getElementById('f-fecha').value      = f.fecha;
+  document.getElementById('f-monto').value      = f.monto;
+  document.getElementById('f-estado').value     = f.estado;
+  document.getElementById('f-forma').value      = f.formaPago || '';
   document.getElementById('f-fecha-pago').value = f.fechaPago || '';
-  document.getElementById('f-abonado').value = f.totalAbonado || 0;
-  document.getElementById('f-obs').value = f.observaciones || '';
+  document.getElementById('f-abonado').value    = f.totalAbonado || 0;
+  document.getElementById('f-obs').value        = f.observaciones || '';
   togglePagoFields();
   openModal('modal-factura');
 }
-
 function openPago(rowIndex) {
   const f = allFacturas.find(x => x.rowIndex === rowIndex);
   if (!f) return;
   pagoRowIndex = rowIndex;
-  const saldo = f.montoOriginal > 0 ? (f.montoOriginal - f.totalAbonado) : f.monto;
-  document.getElementById('pago-nro').textContent  = f.nroFactura;
-  document.getElementById('pago-prov').textContent = f.proveedor;
+  const saldo = calcSaldo(f);
+  document.getElementById('pago-nro').textContent   = f.nroFactura;
+  document.getElementById('pago-prov').textContent  = f.proveedor;
   document.getElementById('pago-saldo').textContent = fmt(saldo);
   document.getElementById('pago-monto').value = saldo;
   document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
@@ -1148,26 +1220,29 @@ async function submitFactura(e) {
   btn.textContent = '⏳ Guardando...'; btn.disabled = true;
 
   if (API_URL) {
-    const res = await apiPost({ action: editRowIndex ? 'updateFactura' : 'addFactura', rowIndex: editRowIndex, data });
+    const params = editRowIndex
+      ? { action: 'updateFactura', rowIndex: editRowIndex, ...data }
+      : { action: 'addFactura', ...data };
+    const res = await apiCall(params);
     if (res && res.ok) {
-      toast('Factura guardada correctamente ✅', 'success');
+      toast('Factura guardada ✅', 'success');
       await loadData();
     } else {
-      toast('Error al guardar: ' + (res?.error || 'desconocido'), 'error');
+      toast('Error: ' + (res?.error || 'desconocido'), 'error');
     }
   } else {
-    // modo demo: actualizar local
     if (editRowIndex) {
       const idx = allFacturas.findIndex(f => f.rowIndex === editRowIndex);
-      if (idx >= 0) allFacturas[idx] = {...allFacturas[idx], ...data, nroFactura: data.nroFactura};
+      if (idx >= 0) allFacturas[idx] = {...allFacturas[idx], ...data};
     } else {
-      allFacturas.push({...data, rowIndex: Date.now(), nroFactura: data.nroFactura});
+      allFacturas.push({...data, rowIndex: Date.now()});
     }
-    toast('Guardado localmente (modo demo)', 'success');
+    toast('Guardado (modo demo)', 'success');
     updateDashboard();
   }
 
-  btn.textContent = editRowIndex ? '💾 Actualizar' : '💾 Guardar'; btn.disabled = false;
+  btn.textContent = editRowIndex ? '💾 Actualizar' : '💾 Guardar';
+  btn.disabled = false;
   closeModal('modal-factura');
   editRowIndex = null;
 }
@@ -1181,42 +1256,53 @@ async function submitPago() {
 
   const f = allFacturas.find(x => x.rowIndex === pagoRowIndex);
   if (!f) return;
+
   const nuevoAbonado = (f.totalAbonado || 0) + monto;
-  const esPagada = nuevoAbonado >= (f.montoOriginal || f.monto);
+  const esPagada = nuevoAbonado >= ((f.montoOriginal || f.monto) - 1);
+  const estado   = esPagada ? 'PAGADA' : 'PENDIENTE';
+
+  const btn = document.querySelector('#modal-pago .btn-success');
+  btn.textContent = '⏳ Procesando...'; btn.disabled = true;
 
   if (API_URL) {
-    const res = await apiPost({
-      action: 'pagarFactura', rowIndex: pagoRowIndex,
-      data: { fechaPago: fecha, formaPago: forma, totalAbonado: nuevoAbonado,
-              estado: esPagada ? 'PAGADA' : 'PENDIENTE' }
+    const res = await apiCall({
+      action: 'pagarFactura',
+      rowIndex: pagoRowIndex,
+      fechaPago: fecha,
+      formaPago: forma,
+      totalAbonado: nuevoAbonado,
+      estado: estado
     });
-    if (res && res.ok) { toast('Pago registrado ✅', 'success'); await loadData(); }
-    else toast('Error: ' + (res?.error || ''), 'error');
+    if (res && res.ok) {
+      toast('Pago registrado ✅', 'success');
+      await loadData();
+    } else {
+      toast('Error: ' + (res?.error || ''), 'error');
+    }
   } else {
     const idx = allFacturas.findIndex(x => x.rowIndex === pagoRowIndex);
     if (idx >= 0) {
-      allFacturas[idx].totalAbonado = nuevoAbonado;
-      allFacturas[idx].formaPago = forma;
-      allFacturas[idx].fechaPago = fecha;
-      allFacturas[idx].estado = esPagada ? 'PAGADA' : 'PENDIENTE';
+      allFacturas[idx] = {...allFacturas[idx], totalAbonado: nuevoAbonado, formaPago: forma, fechaPago: fecha, estado};
     }
-    toast('Pago registrado localmente (modo demo)', 'success');
+    toast('Pago registrado (modo demo)', 'success');
     updateDashboard();
   }
+
+  btn.textContent = '✅ Confirmar Pago'; btn.disabled = false;
   closeModal('modal-pago');
 }
 
 // ── Delete ───────────────────────────────────────────────────
 async function deleteFact(rowIndex) {
-  if (!confirm('¿Eliminar esta factura?')) return;
+  if (!confirm('¿Eliminar esta factura? Esta acción no se puede deshacer.')) return;
   if (API_URL) {
-    const res = await apiPost({ action: 'deleteFactura', rowIndex });
+    const res = await apiCall({ action: 'deleteFactura', rowIndex });
     if (res && res.ok) { toast('Factura eliminada', 'success'); await loadData(); }
     else toast('Error: ' + (res?.error || ''), 'error');
   } else {
     allFacturas = allFacturas.filter(f => f.rowIndex !== rowIndex);
     updateDashboard(); renderFacturas();
-    toast('Eliminada localmente (modo demo)', 'success');
+    toast('Eliminada (modo demo)', 'success');
   }
 }
 
@@ -1234,24 +1320,17 @@ function saveApiUrl() {
   localStorage.setItem('facturas_api_url', API_URL);
 }
 
-// ── Close modal on outside click ─────────────────────────────
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) overlay.classList.remove('open');
   });
 });
 
-// ── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore API URL
-  const savedUrl = localStorage.getItem('facturas_api_url');
-  if (savedUrl) {
-    API_URL = savedUrl;
-    document.getElementById('api-url-input').value = savedUrl;
-  }
+  const saved = localStorage.getItem('facturas_api_url');
+  if (saved) { API_URL = saved; document.getElementById('api-url-input').value = saved; }
   populateFilters();
   loadData();
-  // Set today in form
   document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
 });
 </script>
