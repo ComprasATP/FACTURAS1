@@ -771,7 +771,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 // ═══════════════════════════════════════════════════════════
 //  CONFIG & STATE
 // ═══════════════════════════════════════════════════════════
-let API_URL = localStorage.getItem('facturas_api_url') || '';
+// ══ CONFIGURACIÓN — Pegá tu URL del Apps Script acá abajo ══
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxVgGLGCedIF3UDotvvbROSz_zxV4AaCZ4oEmCV0YJraFywaDtSZzvsO5nL1b8h7_Ke4Q/exec'; // <-- REEMPLAZAR
+let API_URL = SCRIPT_URL || localStorage.getItem('facturas_api_url') || '';
 let allFacturas = [];
 let editRowIndex = null;
 let pagoRowIndex = null;
@@ -1395,11 +1397,12 @@ function toast(msg, type = 'success') {
 
 // ── Config ───────────────────────────────────────────────────
 function saveApiUrl() {
-  const input = document.getElementById('api-url-input').value.trim();
-  if (input) {
-    API_URL = input;
-    localStorage.setItem('facturas_api_url', API_URL);
-    document.getElementById('conn-status').textContent = '💾 URL guardada';
+  const val = document.getElementById('api-url-input').value.trim();
+  if (val) {
+    API_URL = val;
+    localStorage.setItem('facturas_api_url', val);
+    document.getElementById('conn-status').textContent = '💾 URL guardada — probando...';
+    setTimeout(loadData, 500);
   }
 }
 
@@ -1410,8 +1413,15 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('facturas_api_url');
-  if (saved) { API_URL = saved; document.getElementById('api-url-input').value = saved; }
+  // Prioridad: URL hardcodeada > localStorage
+  if (SCRIPT_URL && SCRIPT_URL !== 'TU_URL_AQUI') {
+    API_URL = SCRIPT_URL;
+    document.getElementById('api-url-input').value = SCRIPT_URL;
+    localStorage.setItem('facturas_api_url', SCRIPT_URL);
+  } else {
+    const saved = localStorage.getItem('facturas_api_url');
+    if (saved) { API_URL = saved; document.getElementById('api-url-input').value = saved; }
+  }
   populateFilters();
   loadData();
   document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
