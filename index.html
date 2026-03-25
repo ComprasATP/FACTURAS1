@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FacturasPRO · ATP</title>
+<meta name="theme-color" content="#0F1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FacturasPRO">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 /* ── RESET & VARIABLES ─────────────────────────────────────── */
@@ -309,6 +315,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%,60%{transform:translateX(-8px)}
+  40%,80%{transform:translateX(8px)}
+}
 
 /* ── TOAST ─────────────────────────────────────────────────── */
 .toast{
@@ -365,11 +376,122 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .filters{flex-direction:column;align-items:stretch}
   .filter-search{min-width:unset}
 }
+
+/* ── LOGIN SCREEN ──────────────────────────────────────────── */
+#login-screen{
+  position:fixed;inset:0;
+  background:linear-gradient(135deg,#0F1419 0%,#1A2A3A 50%,#0F1419 100%);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;
+  flex-direction:column;
+  gap:0;
+}
+#login-screen.hidden{display:none}
+.login-box{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:40px 36px;
+  width:100%;max-width:380px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  animation:slideUp .3s ease;
+}
+.login-logo{
+  text-align:center;margin-bottom:28px;
+}
+.login-logo h1{
+  font-size:1.6rem;font-weight:700;color:var(--text);
+  letter-spacing:-.5px;
+}
+.login-logo p{font-size:.8rem;color:var(--text2);margin-top:4px}
+.login-dot{
+  display:inline-block;width:10px;height:10px;
+  background:var(--green2);border-radius:50%;
+  margin-right:6px;animation:pulse 2s infinite;
+}
+.login-field{
+  display:flex;flex-direction:column;gap:6px;margin-bottom:16px;
+}
+.login-field label{
+  font-size:.72rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text2);
+}
+.login-field input{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:12px 14px;border-radius:10px;
+  font-size:.9rem;outline:none;font-family:var(--font);
+  transition:border-color .15s;
+}
+.login-field input:focus{border-color:var(--accent)}
+.login-btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  background:var(--accent);color:white;
+  font-size:.9rem;font-weight:700;cursor:pointer;
+  font-family:var(--font);transition:all .15s;
+  margin-top:8px;
+}
+.login-btn:hover{background:#1a7aa8;transform:translateY(-1px)}
+.login-btn:active{transform:translateY(0)}
+.login-error{
+  background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);
+  color:#FF6B6B;border-radius:8px;padding:10px 14px;
+  font-size:.8rem;text-align:center;margin-top:12px;
+  display:none;
+}
+.login-error.show{display:block}
+.login-footer{
+  text-align:center;margin-top:20px;
+  font-size:.72rem;color:var(--text3);
+}
+/* PWA install banner */
+#pwa-banner{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--accent);
+  border-radius:12px;padding:12px 18px;
+  display:flex;align-items:center;gap:12px;
+  font-size:.82rem;box-shadow:0 8px 30px rgba(0,0,0,.4);
+  z-index:400;max-width:340px;width:90%;
+  animation:slideUp .3s ease;
+}
+#pwa-banner.hidden{display:none}
+#pwa-banner .pwa-text{flex:1;color:var(--text)}
+#pwa-banner .pwa-text b{color:var(--accent2)}
 </style>
 </head>
 <body>
 
 <!-- ── MOBILE TOGGLE ──────────────────────────────────────── -->
+<!-- ── LOGIN SCREEN ──────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1><span class="login-dot"></span>FacturasPRO</h1>
+      <p>Sistema de Gestión de Facturas · ATP 2026</p>
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="Ingresá tu usuario" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar →</button>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+    <div class="login-footer">Acceso restringido · Solo personal autorizado</div>
+  </div>
+</div>
+
+<!-- ── PWA INSTALL BANNER ─────────────────────────────────── -->
+<div id="pwa-banner" class="hidden">
+  <span style="font-size:1.4rem">📱</span>
+  <div class="pwa-text"><b>Instalá la app</b><br>Agregá FacturasPRO a tu pantalla de inicio</div>
+  <button class="btn btn-primary btn-sm" onclick="installPWA()">Instalar</button>
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pwa-banner').classList.add('hidden')">✕</button>
+</div>
+
 <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
 
 <!-- ── SIDEBAR ────────────────────────────────────────────── -->
@@ -1323,14 +1445,107 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+// ── Credenciales de acceso ────────────────────────────────────
+// Para cambiar: modificá estas dos líneas
+const USERS = {
+  'compras':  'atp2026',   // usuario: compras | clave: atp2026
+  'gerencia': 'atp2026',   // usuario: gerencia | clave: atp2026
+};
+const SESSION_KEY = 'facturas_session';
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+
+  if (USERS[user] && USERS[user] === pass) {
+    sessionStorage.setItem(SESSION_KEY, btoa(user + ':' + Date.now()));
+    document.getElementById('login-screen').classList.add('hidden');
+    err.classList.remove('show');
+    initApp();
+  } else {
+    err.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+    // shake animation
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none';
+    box.offsetHeight;
+    box.style.animation = 'shake .3s ease';
+  }
+}
+
+function checkSession() {
+  const s = sessionStorage.getItem(SESSION_KEY);
+  if (s) {
+    document.getElementById('login-screen').classList.add('hidden');
+    return true;
+  }
+  // Focus on user field
+  setTimeout(() => document.getElementById('login-user').focus(), 100);
+  return false;
+}
+
+function initApp() {
   populateFilters();
   loadData();
   document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
-  // Update config section to show Supabase info
   document.getElementById('api-url-input').value = SB_URL;
   document.getElementById('conn-status').textContent = '✅ Usando Supabase';
+  // Show PWA banner after 3s if not installed
+  setTimeout(checkPWA, 3000);
+}
+
+// ── PWA Install ───────────────────────────────────────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('pwa-banner').classList.remove('hidden');
 });
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') toast('✅ App instalada', 'success');
+  deferredPrompt = null;
+  document.getElementById('pwa-banner').classList.add('hidden');
+}
+
+function checkPWA() {
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  if (!isInstalled && deferredPrompt) {
+    document.getElementById('pwa-banner').classList.remove('hidden');
+  }
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-banner').classList.add('hidden');
+  toast('✅ FacturasPRO instalada como app', 'success');
+});
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (checkSession()) initApp();
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/FACTURAS1/sw.js')
+      .then(() => console.log('SW registrado'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
 </script>
 </body>
 </html>
