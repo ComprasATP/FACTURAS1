@@ -27,5 +27,28 @@ self.addEventListener('fetch', e => {
   if (e.request.url.includes('supabase.co')) return;
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
-  );
-});
+    
+async function cargarProveedores() {
+
+  const { data, error } = await supabase
+    .from('proveedores')
+    .select('*');
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const contenedor = document.getElementById("listaProveedores");
+  contenedor.innerHTML = "";
+
+  data.forEach(p => {
+    contenedor.innerHTML += `
+      <div style="padding:10px; border-bottom:1px solid #ccc;">
+        <strong>${p.nombre}</strong><br>
+        CUIT: ${p.cuit || '-'}<br>
+        Email: ${p.email || '-'}
+      </div>
+    `;
+  });
+}
