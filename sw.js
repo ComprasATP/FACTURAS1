@@ -49,6 +49,9 @@ async function cargarProveedores() {
         CUIT: ${p.cuit || '-'}<br>
         Email: ${p.email || '-'}
       </div>
+      window.onload = function() {
+  cargarProveedores();
+};
     `;
   });
 }
