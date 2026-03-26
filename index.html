@@ -461,7 +461,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </head>
 <body>
 
-<!-- ── MOBILE TOGGLE ──────────────────────────────────────── -->
 <!-- ── LOGIN SCREEN ──────────────────────────────────────── -->
 <div id="login-screen">
   <div class="login-box">
@@ -742,29 +741,49 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
     <!-- ═══ CONFIG ═══ -->
     <div class="section" id="section-config">
-      <div class="section-hdr"><div><h2>⚙ Configuración</h2><p>Conectar con Google Sheets</p></div></div>
+      <div class="section-hdr"><div><h2>⚙ Configuración</h2><p>Conexión Supabase</p></div></div>
       <div class="config-card">
-        <h3>🔗 URL del Apps Script (API)</h3>
-        <p style="font-size:.8rem;color:var(--text2);margin-bottom:12px">Pegá acá la URL que obtenés al desplegar el Apps Script como Web App</p>
-        <input class="config-api-input" id="api-url-input" placeholder="https://script.google.com/macros/s/XXXXXXX/exec"
-          value="" oninput="saveApiUrl()">
+        <h3>🔗 Endpoint Supabase activo</h3>
+        <p style="font-size:.8rem;color:var(--text2);margin-bottom:12px">La aplicación usa Supabase como base de datos en tiempo real.</p>
+        <input class="config-api-input" id="api-url-input" placeholder="https://xxxx.supabase.co" value="" readonly>
         <div style="margin-top:12px;display:flex;gap:10px">
           <button class="btn btn-primary btn-sm" onclick="loadData()">🔄 Probar conexión</button>
           <span id="conn-status" style="font-size:.78rem;color:var(--text2);align-self:center"></span>
         </div>
       </div>
       <div class="config-card">
-        <h3>📋 Instrucciones para conectar</h3>
-        <ol style="font-size:.82rem;color:var(--text2);line-height:2;padding-left:18px">
-          <li>Abrí tu Google Sheets</li>
-          <li>Menú <b style="color:var(--text)">Extensiones → Apps Script</b></li>
-          <li>Borrá todo y pegá el contenido del archivo <b style="color:var(--accent2)">Code.gs</b></li>
-          <li>Hacé clic en <b style="color:var(--text)">Implementar → Nueva implementación</b></li>
-          <li>Tipo: <b style="color:var(--text)">Aplicación web</b></li>
-          <li>Ejecutar como: <b style="color:var(--text)">Yo</b></li>
-          <li>Quién tiene acceso: <b style="color:var(--text)">Cualquier persona</b></li>
-          <li>Copiá la URL generada y pegala arriba</li>
-        </ol>
+        <h3>📋 Estructura de tablas en Supabase</h3>
+        <pre style="font-size:.75rem;color:var(--accent2);background:var(--surface2);padding:14px;border-radius:8px;overflow-x:auto;line-height:1.6">create table proveedores (
+  id bigint generated always as identity primary key,
+  nombre text not null unique,
+  cuit text,
+  telefono text,
+  email text,
+  plazo_dias integer default 30,
+  notas text,
+  created_at timestamptz default now()
+);
+alter table proveedores enable row level security;
+create policy "Acceso publico" on proveedores
+  for all using (true) with check (true);
+
+create table facturas (
+  id bigint generated always as identity primary key,
+  nro_factura text not null,
+  fecha date,
+  monto numeric(12,2) default 0,
+  estado text default 'PENDIENTE',
+  fecha_pago date,
+  proveedor text,
+  forma_pago text,
+  monto_original numeric(12,2) default 0,
+  total_abonado numeric(12,2) default 0,
+  observaciones text,
+  created_at timestamptz default now()
+);
+alter table facturas enable row level security;
+create policy "Acceso publico" on facturas
+  for all using (true) with check (true);</pre>
       </div>
     </div>
 
@@ -937,7 +956,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <script>
 // ═══════════════════════════════════════════════════════════
-//  FACTURASPRO — Supabase Edition
+//  FACTURASPRO — Supabase Edition  (v2 — bug fixes aplicados)
 // ═══════════════════════════════════════════════════════════
 const SB_URL = 'https://fyksonhxmaayfkodaddx.supabase.co';
 const SB_KEY = 'sb_publishable_h2wERnFstP0NVYof4LFbgQ_4PWLqL6x';
@@ -948,11 +967,11 @@ const SB_HEADERS = {
   'Prefer': 'return=representation'
 };
 
-let allFacturas = [];
+let allFacturas    = [];
 let allProveedores = [];
-let editId = null;
-let pagoId = null;
-let editProvId = null;
+let editId         = null;
+let pagoId         = null;
+let editProvId     = null;
 
 // ── Supabase proveedores helpers ──────────────────────────────
 async function sbGetProveedores() {
@@ -1040,22 +1059,27 @@ function goTo(section) {
   }
 }
 
-// ── Load all data ─────────────────────────────────────────────
+// ── FIX 1: Load all data — nunca pisa datos si hay error ──────
 async function loadData() {
   setSyncStatus('Sincronizando...', false);
   try {
+    // Fetch facturas (obligatorio) y proveedores (opcional — null si falla)
     const [facts, provs] = await Promise.all([
       sbGet('&select=*'),
-      sbGetProveedores().catch(() => [])
+      sbGetProveedores().catch(() => null)
     ]);
-    allFacturas   = facts;
-    allProveedores = provs;
+    allFacturas = facts;
+    // Solo actualizar proveedores si el fetch fue exitoso
+    if (provs !== null) allProveedores = provs;
     setSyncStatus('Sincronizado ✓ — ' + allFacturas.length + ' facturas', true);
+    document.getElementById('conn-status').textContent = '✅ Conectado a Supabase';
     updateDashboard();
     populateFilters();
   } catch(e) {
     setSyncStatus('Error: ' + e.message, false);
+    document.getElementById('conn-status').textContent = '❌ Error de conexión';
     toast('Error al conectar con Supabase: ' + e.message, 'error');
+    // No limpiar los datos que ya teníamos en memoria
   }
 }
 
@@ -1130,16 +1154,20 @@ function updateDashboard() {
     '<div class="empty"><div class="ei">✅</div><p>Sin facturas vencidas</p></div>';
 }
 
-// ── Populate filters ──────────────────────────────────────────
+// ── FIX 3: populateFilters — nunca vacía si ya había datos ────
 function populateFilters() {
   const selFilt = document.getElementById('filter-proveedor');
   const selForm = document.getElementById('f-proveedor');
-  selFilt.innerHTML = '<option value="">Todos los proveedores</option>';
-  selForm.innerHTML = '<option value="">Seleccioná...</option>';
-  // Prefer proveedores table; fallback to static list + facturas
+
   let names = allProveedores.length > 0
     ? allProveedores.map(p => p.nombre).filter(Boolean)
     : [...new Set([...PROVEEDORES, ...allFacturas.map(f=>f.proveedor).filter(Boolean)])].sort();
+
+  // Si names quedó vacío por algún error, no actualizar los selects
+  if (!names.length) return;
+
+  selFilt.innerHTML = '<option value="">Todos los proveedores</option>';
+  selForm.innerHTML = '<option value="">Seleccioná...</option>';
   names.forEach(p => {
     selFilt.innerHTML += `<option value="${p}">${p}</option>`;
     selForm.innerHTML += `<option value="${p}">${p}</option>`;
@@ -1286,7 +1314,6 @@ function renderParciales() {
 
 // ── Proveedores ───────────────────────────────────────────────
 function renderProveedores() {
-  // Stats from facturas
   const stats = {};
   allFacturas.forEach(f => {
     if (!stats[f.proveedor]) stats[f.proveedor] = {total:0,pend:0,pag:0,deuda:0,pagado:0};
@@ -1295,7 +1322,6 @@ function renderProveedores() {
     else { stats[f.proveedor].pend++; stats[f.proveedor].deuda += calcSaldo(f); }
   });
 
-  // Use proveedores table if available, else build from facturas
   const list = allProveedores.length > 0
     ? allProveedores
     : [...new Set(allFacturas.map(f=>f.proveedor).filter(Boolean))].sort()
@@ -1303,6 +1329,9 @@ function renderProveedores() {
 
   const search = (document.getElementById('search-proveedor')?.value || '').toLowerCase();
   const filtered = list.filter(p => !search || p.nombre.toLowerCase().includes(search));
+
+  const el = document.getElementById('proveedores-count');
+  if (el) el.textContent = filtered.length + ' proveedores registrados';
 
   const rows = filtered
     .sort((a,b) => {
@@ -1365,6 +1394,7 @@ function openEditProv(id) {
   document.getElementById('modal-prov-form').classList.add('open');
 }
 
+// ── FIX 2: submitProveedor — maneja duplicados y no borra datos
 async function submitProveedor(e) {
   e.preventDefault();
   const data = {
@@ -1376,23 +1406,35 @@ async function submitProveedor(e) {
     notas:      document.getElementById('pf-notas').value.trim()   || null,
   };
   const btn = document.getElementById('btn-submit-prov');
+  const currentEditId = editProvId; // guardar antes de resetear
   btn.textContent = '⏳ Guardando...'; btn.disabled = true;
   try {
-    if (editProvId) await sbUpdateProv(editProvId, data);
-    else            await sbInsertProv(data);
+    if (currentEditId) await sbUpdateProv(currentEditId, data);
+    else               await sbInsertProv(data);
     toast('Proveedor guardado ✅', 'success');
-    await loadData();
-    renderProveedores();
+    // Cerrar modal ANTES de recargar
     document.getElementById('modal-prov-form').classList.remove('open');
     editProvId = null;
-  } catch(err) { toast('Error: ' + err.message, 'error'); }
-  btn.textContent = editProvId ? '💾 Actualizar' : '💾 Guardar';
+    // Recargar datos y rerenderizar
+    await loadData();
+    renderProveedores();
+  } catch(err) {
+    // Mensaje claro para nombre duplicado
+    const isDuplicate = err.message.includes('duplicate') ||
+                        err.message.includes('unique')    ||
+                        err.message.includes('23505');
+    const msg = isDuplicate
+      ? `El proveedor "${data.nombre}" ya existe en el sistema`
+      : 'Error al guardar: ' + err.message;
+    toast(msg, 'error');
+    // NO tocar allProveedores ni rerenderizar — datos intactos
+  }
+  btn.textContent = currentEditId ? '💾 Actualizar' : '💾 Guardar';
   btn.disabled = false;
 }
 
 async function deleteProv(id, nombre) {
-  if (!confirm(`¿Eliminar el proveedor "${nombre}"?
-Sus facturas no se borran.`)) return;
+  if (!confirm(`¿Eliminar el proveedor "${nombre}"?\nSus facturas no se borran.`)) return;
   try {
     await sbDeleteProv(id);
     toast('Proveedor eliminado', 'success');
@@ -1405,9 +1447,9 @@ function openProveedorDetalle(prov) {
   const hoy = new Date();
   const facts = allFacturas.filter(f => f.proveedor === prov)
     .sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-  const deuda   = facts.filter(f=>f.estado!=='PAGADA').reduce((s,f)=>s+calcSaldo(f),0);
-  const pagado  = facts.filter(f=>f.estado==='PAGADA').reduce((s,f)=>s+f.monto,0);
-  const cPend   = facts.filter(f=>f.estado!=='PAGADA').length;
+  const deuda  = facts.filter(f=>f.estado!=='PAGADA').reduce((s,f)=>s+calcSaldo(f),0);
+  const pagado = facts.filter(f=>f.estado==='PAGADA').reduce((s,f)=>s+f.monto,0);
+  const cPend  = facts.filter(f=>f.estado!=='PAGADA').length;
 
   document.getElementById('modal-prov-title').textContent = '📂 ' + prov;
   document.getElementById('modal-prov-stats').innerHTML =
@@ -1524,9 +1566,9 @@ function openPago(id) {
 // ── Submit Factura ────────────────────────────────────────────
 async function submitFactura(e) {
   e.preventDefault();
-  const monto = parseFloat(document.getElementById('f-monto').value) || 0;
+  const monto   = parseFloat(document.getElementById('f-monto').value) || 0;
   const abonado = parseFloat(document.getElementById('f-abonado').value) || 0;
-  const estado = document.getElementById('f-estado').value;
+  const estado  = document.getElementById('f-estado').value;
   const data = {
     nro_factura:    document.getElementById('f-nro').value.trim(),
     fecha:          document.getElementById('f-fecha').value || null,
@@ -1541,10 +1583,11 @@ async function submitFactura(e) {
   };
 
   const btn = document.getElementById('btn-submit-factura');
+  const currentEditId = editId;
   btn.textContent = '⏳ Guardando...'; btn.disabled = true;
   try {
-    if (editId) await sbUpdate(editId, data);
-    else        await sbInsert(data);
+    if (currentEditId) await sbUpdate(currentEditId, data);
+    else               await sbInsert(data);
     toast('Factura guardada ✅', 'success');
     await loadData();
     closeModal('modal-factura');
@@ -1552,7 +1595,7 @@ async function submitFactura(e) {
   } catch(err) {
     toast('Error: ' + err.message, 'error');
   }
-  btn.textContent = editId ? '💾 Actualizar' : '💾 Guardar';
+  btn.textContent = currentEditId ? '💾 Actualizar' : '💾 Guardar';
   btn.disabled = false;
 }
 
@@ -1606,9 +1649,10 @@ function toast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── Config section (simplified - no longer needed) ────────────
+// ── Config (placeholder) ──────────────────────────────────────
 function saveApiUrl() {}
 
+// ── Cierre de modales al click en overlay ─────────────────────
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) overlay.classList.remove('open');
@@ -1616,10 +1660,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 // ── Credenciales de acceso ────────────────────────────────────
-// Para cambiar: modificá estas dos líneas
 const USERS = {
-  'compras':  'atp2026',   // usuario: compras | clave: atp2026
-  'gerencia': 'atp2026',   // usuario: gerencia | clave: atp2026
+  'compras':  'atp2026',
+  'gerencia': 'atp2026',
 };
 const SESSION_KEY = 'facturas_session';
 
@@ -1637,7 +1680,6 @@ function doLogin() {
     err.classList.add('show');
     document.getElementById('login-pass').value = '';
     document.getElementById('login-pass').focus();
-    // shake animation
     const box = document.querySelector('.login-box');
     box.style.animation = 'none';
     box.offsetHeight;
@@ -1651,7 +1693,6 @@ function checkSession() {
     document.getElementById('login-screen').classList.add('hidden');
     return true;
   }
-  // Focus on user field
   setTimeout(() => document.getElementById('login-user').focus(), 100);
   return false;
 }
@@ -1661,8 +1702,6 @@ function initApp() {
   loadData();
   document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
   document.getElementById('api-url-input').value = SB_URL;
-  document.getElementById('conn-status').textContent = '✅ Usando Supabase';
-  // Show PWA banner after 3s if not installed
   setTimeout(checkPWA, 3000);
 }
 
@@ -1695,12 +1734,6 @@ function checkPWA() {
 window.addEventListener('appinstalled', () => {
   document.getElementById('pwa-banner').classList.add('hidden');
   toast('✅ FacturasPRO instalada como app', 'success');
-});
-
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
 });
 
 document.addEventListener('DOMContentLoaded', () => {
