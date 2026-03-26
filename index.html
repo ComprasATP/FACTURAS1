@@ -714,18 +714,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <!-- ═══ PROVEEDORES ═══ -->
     <div class="section" id="section-proveedores">
       <div class="section-hdr">
-        <div><h2>🏢 Proveedores</h2><p>Resumen de deuda por proveedor</p></div>
+        <div><h2>🏢 Proveedores</h2><p id="proveedores-count">Cargando...</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openNuevoProv()">+ Nuevo Proveedor</button>
+      </div>
+      <div class="filters">
+        <input class="filter-search" id="search-proveedor" placeholder="🔍 Buscar proveedor..." oninput="renderProveedores()">
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Proveedor</th>
-              <th>Facturas Totales</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Facturas</th>
               <th>Pendientes</th>
-              <th>Pagadas</th>
               <th>Deuda Total</th>
-              <th>Total Pagado</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -735,6 +739,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </table>
       </div>
     </div>
+
     <!-- ═══ CONFIG ═══ -->
     <div class="section" id="section-config">
       <div class="section-hdr"><div><h2>⚙ Configuración</h2><p>Conectar con Google Sheets</p></div></div>
@@ -885,6 +890,48 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<!-- ═══ MODAL: NUEVO/EDITAR PROVEEDOR ═══ -->
+<div class="modal-overlay" id="modal-prov-form">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="modal-prov-form-title">+ Nuevo Proveedor</h3>
+      <button class="modal-close" onclick="document.getElementById('modal-prov-form').classList.remove('open')">✕</button>
+    </div>
+    <form id="form-proveedor" onsubmit="submitProveedor(event)">
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label>Nombre / Razón Social *</label>
+          <input id="pf-nombre" type="text" required placeholder="ej: MUNDOCAMIONES">
+        </div>
+        <div class="form-group">
+          <label>CUIT</label>
+          <input id="pf-cuit" type="text" placeholder="20-12345678-9">
+        </div>
+        <div class="form-group">
+          <label>Plazo de pago (días)</label>
+          <input id="pf-plazo" type="number" placeholder="30" min="1" value="30">
+        </div>
+        <div class="form-group">
+          <label>Teléfono / WhatsApp</label>
+          <input id="pf-telefono" type="text" placeholder="+54 9 11 1234-5678">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input id="pf-email" type="email" placeholder="contacto@proveedor.com">
+        </div>
+        <div class="form-group span2">
+          <label>Notas / Observaciones</label>
+          <textarea id="pf-notas" placeholder="Condiciones comerciales, contacto, etc..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-prov-form').classList.remove('open')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-prov">💾 Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
@@ -902,8 +949,37 @@ const SB_HEADERS = {
 };
 
 let allFacturas = [];
+let allProveedores = [];
 let editId = null;
 let pagoId = null;
+let editProvId = null;
+
+// ── Supabase proveedores helpers ──────────────────────────────
+async function sbGetProveedores() {
+  const res = await fetch(`${SB_URL}/rest/v1/proveedores?order=nombre.asc`, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function sbInsertProv(data) {
+  const res = await fetch(`${SB_URL}/rest/v1/proveedores`, {
+    method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function sbUpdateProv(id, data) {
+  const res = await fetch(`${SB_URL}/rest/v1/proveedores?id=eq.${id}`, {
+    method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function sbDeleteProv(id) {
+  const res = await fetch(`${SB_URL}/rest/v1/proveedores?id=eq.${id}`, {
+    method: 'DELETE', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
 
 const PROVEEDORES = [
   'MUNDOCAMIONES','FRANGET','SETTECASE','CORCAM','BUSWAGEN',
@@ -956,14 +1032,24 @@ function goTo(section) {
   if (section === 'pendientes')  renderPendientes();
   if (section === 'alertas')     renderAlertas();
   if (section === 'parciales')   renderParciales();
-  if (section === 'proveedores') renderProveedores();
+  if (section === 'proveedores') {
+    renderProveedores();
+    const total = allProveedores.length || new Set(allFacturas.map(f=>f.proveedor)).size;
+    const el = document.getElementById('proveedores-count');
+    if (el) el.textContent = total + ' proveedores registrados';
+  }
 }
 
 // ── Load all data ─────────────────────────────────────────────
 async function loadData() {
   setSyncStatus('Sincronizando...', false);
   try {
-    allFacturas = await sbGet('&select=*');
+    const [facts, provs] = await Promise.all([
+      sbGet('&select=*'),
+      sbGetProveedores().catch(() => [])
+    ]);
+    allFacturas   = facts;
+    allProveedores = provs;
     setSyncStatus('Sincronizado ✓ — ' + allFacturas.length + ' facturas', true);
     updateDashboard();
     populateFilters();
@@ -1050,9 +1136,11 @@ function populateFilters() {
   const selForm = document.getElementById('f-proveedor');
   selFilt.innerHTML = '<option value="">Todos los proveedores</option>';
   selForm.innerHTML = '<option value="">Seleccioná...</option>';
-  // Use proveedores found in data + static list
-  const provSet = new Set([...PROVEEDORES, ...allFacturas.map(f=>f.proveedor).filter(Boolean)]);
-  [...provSet].sort().forEach(p => {
+  // Prefer proveedores table; fallback to static list + facturas
+  let names = allProveedores.length > 0
+    ? allProveedores.map(p => p.nombre).filter(Boolean)
+    : [...new Set([...PROVEEDORES, ...allFacturas.map(f=>f.proveedor).filter(Boolean)])].sort();
+  names.forEach(p => {
     selFilt.innerHTML += `<option value="${p}">${p}</option>`;
     selForm.innerHTML += `<option value="${p}">${p}</option>`;
   });
@@ -1198,36 +1286,119 @@ function renderParciales() {
 
 // ── Proveedores ───────────────────────────────────────────────
 function renderProveedores() {
-  const data = {};
+  // Stats from facturas
+  const stats = {};
   allFacturas.forEach(f => {
-    if (!data[f.proveedor]) data[f.proveedor] = {total:0,pend:0,pag:0,deuda:0,pagado:0};
-    data[f.proveedor].total++;
-    if (f.estado === 'PAGADA') { data[f.proveedor].pag++; data[f.proveedor].pagado += f.monto; }
-    else { data[f.proveedor].pend++; data[f.proveedor].deuda += calcSaldo(f); }
+    if (!stats[f.proveedor]) stats[f.proveedor] = {total:0,pend:0,pag:0,deuda:0,pagado:0};
+    stats[f.proveedor].total++;
+    if (f.estado === 'PAGADA') { stats[f.proveedor].pag++; stats[f.proveedor].pagado += f.monto; }
+    else { stats[f.proveedor].pend++; stats[f.proveedor].deuda += calcSaldo(f); }
   });
 
-  const rows = Object.entries(data)
-    .sort((a,b) => b[1].deuda - a[1].deuda)
-    .map(([prov,d]) => `<tr style="cursor:pointer" onclick="openProveedorDetalle('${prov}')">
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:34px;height:34px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--accent2);flex-shrink:0">${prov.substring(0,2)}</div>
-          <div>
-            <div style="font-weight:700">${prov}</div>
-            <div style="font-size:.7rem;color:var(--text2)">${d.total} factura${d.total!==1?'s':''}</div>
+  // Use proveedores table if available, else build from facturas
+  const list = allProveedores.length > 0
+    ? allProveedores
+    : [...new Set(allFacturas.map(f=>f.proveedor).filter(Boolean))].sort()
+        .map(n => ({id: null, nombre: n, cuit: '', telefono: '', email: '', plazo_dias: 30, notas: ''}));
+
+  const search = (document.getElementById('search-proveedor')?.value || '').toLowerCase();
+  const filtered = list.filter(p => !search || p.nombre.toLowerCase().includes(search));
+
+  const rows = filtered
+    .sort((a,b) => {
+      const da = stats[a.nombre]?.deuda || 0;
+      const db = stats[b.nombre]?.deuda || 0;
+      return db - da;
+    })
+    .map(p => {
+      const d = stats[p.nombre] || {total:0,pend:0,pag:0,deuda:0,pagado:0};
+      return `<tr>
+        <td style="cursor:pointer" onclick="openProveedorDetalle('${p.nombre}')">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:9px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:var(--accent2);flex-shrink:0">${p.nombre.substring(0,2)}</div>
+            <div>
+              <div style="font-weight:700">${p.nombre}</div>
+              <div style="font-size:.7rem;color:var(--text2)">${p.cuit||'Sin CUIT'} ${p.plazo_dias?'· '+p.plazo_dias+' días':''}</div>
+            </div>
           </div>
-        </div>
-      </td>
-      <td class="mono">${d.total}</td>
-      <td>${d.pend>0?'<span class="badge badge-yellow">'+d.pend+'</span>':'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${d.pag >0?'<span class="badge badge-green">'+d.pag+'</span>' :'<span style="color:var(--text3)">—</span>'}</td>
-      <td class="mono" style="color:${d.deuda>0?'var(--orange)':'var(--text3)'}">${d.deuda>0?fmt(d.deuda):'—'}</td>
-      <td class="mono" style="color:var(--green2)">${d.pagado>0?fmt(d.pagado):'—'}</td>
-      <td onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" onclick="openProveedorDetalle('${prov}')">📂 Ver historial</button></td>
-    </tr>`).join('');
+        </td>
+        <td style="font-size:.78rem;color:var(--text2)">${p.telefono||'—'}</td>
+        <td style="font-size:.78rem;color:var(--text2)">${p.email||'—'}</td>
+        <td class="mono">${d.total||0}</td>
+        <td>${d.pend>0?'<span class="badge badge-yellow">'+d.pend+'</span>':'<span style="color:var(--text3)">—</span>'}</td>
+        <td class="mono" style="color:${d.deuda>0?'var(--orange)':'var(--text3)'}">${d.deuda>0?fmt(d.deuda):'—'}</td>
+        <td>
+          <div class="actions">
+            <button class="act-btn" onclick="openProveedorDetalle('${p.nombre}')">📂</button>
+            ${p.id?`<button class="act-btn" onclick="openEditProv(${p.id})">✏️</button>`:''}
+            ${p.id?`<button class="act-btn del" onclick="deleteProv(${p.id},'${p.nombre}')">🗑</button>`:''}
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
 
   document.getElementById('tbody-proveedores').innerHTML = rows ||
-    `<tr><td colspan="7"><div class="empty"><p>Sin datos</p></div></td></tr>`;
+    `<tr><td colspan="7"><div class="empty"><div class="ei">🏢</div><p>Sin proveedores. Agregá uno con el botón +</p></div></td></tr>`;
+}
+
+// ── CRUD Proveedores ──────────────────────────────────────────
+function openNuevoProv() {
+  editProvId = null;
+  document.getElementById('modal-prov-form-title').textContent = '+ Nuevo Proveedor';
+  document.getElementById('btn-submit-prov').textContent = '💾 Guardar';
+  document.getElementById('form-proveedor').reset();
+  document.getElementById('modal-prov-form').classList.add('open');
+}
+
+function openEditProv(id) {
+  const p = allProveedores.find(x => x.id === id);
+  if (!p) return;
+  editProvId = id;
+  document.getElementById('modal-prov-form-title').textContent = '✏️ Editar Proveedor';
+  document.getElementById('btn-submit-prov').textContent = '💾 Actualizar';
+  document.getElementById('pf-nombre').value    = p.nombre    || '';
+  document.getElementById('pf-cuit').value      = p.cuit      || '';
+  document.getElementById('pf-telefono').value  = p.telefono  || '';
+  document.getElementById('pf-email').value     = p.email     || '';
+  document.getElementById('pf-plazo').value     = p.plazo_dias|| 30;
+  document.getElementById('pf-notas').value     = p.notas     || '';
+  document.getElementById('modal-prov-form').classList.add('open');
+}
+
+async function submitProveedor(e) {
+  e.preventDefault();
+  const data = {
+    nombre:     document.getElementById('pf-nombre').value.trim().toUpperCase(),
+    cuit:       document.getElementById('pf-cuit').value.trim()    || null,
+    telefono:   document.getElementById('pf-telefono').value.trim()|| null,
+    email:      document.getElementById('pf-email').value.trim()   || null,
+    plazo_dias: parseInt(document.getElementById('pf-plazo').value) || 30,
+    notas:      document.getElementById('pf-notas').value.trim()   || null,
+  };
+  const btn = document.getElementById('btn-submit-prov');
+  btn.textContent = '⏳ Guardando...'; btn.disabled = true;
+  try {
+    if (editProvId) await sbUpdateProv(editProvId, data);
+    else            await sbInsertProv(data);
+    toast('Proveedor guardado ✅', 'success');
+    await loadData();
+    renderProveedores();
+    document.getElementById('modal-prov-form').classList.remove('open');
+    editProvId = null;
+  } catch(err) { toast('Error: ' + err.message, 'error'); }
+  btn.textContent = editProvId ? '💾 Actualizar' : '💾 Guardar';
+  btn.disabled = false;
+}
+
+async function deleteProv(id, nombre) {
+  if (!confirm(`¿Eliminar el proveedor "${nombre}"?
+Sus facturas no se borran.`)) return;
+  try {
+    await sbDeleteProv(id);
+    toast('Proveedor eliminado', 'success');
+    await loadData();
+    renderProveedores();
+  } catch(err) { toast('Error: ' + err.message, 'error'); }
 }
 
 function openProveedorDetalle(prov) {
