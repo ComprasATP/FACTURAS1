@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-/* ── RESET & VARIABLES (sin cambios) ───── */
+/* ── RESET & VARIABLES ─────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#0F1419;
@@ -37,7 +37,7 @@
 }
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-/* ── SIDEBAR (sin cambios) ─────────────── */
+/* ── SIDEBAR ───────────────────────────────────────────────── */
 .sidebar{
   position:fixed;top:0;left:0;bottom:0;
   width:220px;background:var(--surface);
@@ -73,7 +73,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 }
 .nav-badge.orange{background:var(--orange)}
 
-/* ── MAIN (sin cambios) ────────────────── */
+/* ── MAIN ──────────────────────────────────────────────────── */
 .main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
 .topbar{
   background:var(--surface);border-bottom:1px solid var(--border);
@@ -94,7 +94,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .section{display:none}
 .section.active{display:block}
 
-/* ── STATS CARDS (sin cambios) ───────── */
+/* ── STATS CARDS ───────────────────────────────────────────── */
 .stats-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
   gap:16px;margin-bottom:24px;
@@ -119,7 +119,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .stat-sub{font-size:.72rem;color:var(--text3);margin-top:6px}
 .stat-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.15}
 
-/* ── SECTION HEADER (sin cambios) ───── */
+/* ── SECTION HEADER ────────────────────────────────────────── */
 .section-hdr{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:20px;
@@ -127,7 +127,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .section-hdr h2{font-size:1.05rem;font-weight:600;color:var(--text)}
 .section-hdr p{font-size:.78rem;color:var(--text2);margin-top:2px}
 
-/* ── BUTTONS (sin cambios) ──────────── */
+/* ── BUTTONS ───────────────────────────────────────────────── */
 .btn{
   display:inline-flex;align-items:center;gap:7px;
   padding:9px 18px;border-radius:8px;font-size:.82rem;
@@ -145,7 +145,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .btn-sm{padding:6px 12px;font-size:.76rem}
 .btn-icon{padding:7px;border-radius:7px}
 
-/* ── FILTERS ────────────────────────── */
+/* ── FILTERS ───────────────────────────────────────────────── */
 .filters{
   display:flex;gap:10px;margin-bottom:16px;
   flex-wrap:wrap;align-items:center;
@@ -159,10 +159,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .filter-select:focus,.filter-search:focus{border-color:var(--accent)}
 .filter-search{min-width:200px}
 
-/* ── TABLE ───────────────────────────── */
+/* ── TABLE ─────────────────────────────────────────────────── */
 .table-wrap{
   background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;overflow:hidden;
+  border-radius:12px;overflow-x:auto; /* Scroll horizontal en móvil */
 }
 .table-wrap table{width:100%;border-collapse:collapse}
 .table-wrap th{
@@ -180,7 +180,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .table-wrap tr:hover td{background:rgba(30,139,195,.04)}
 .table-wrap .mono{font-family:var(--mono);font-size:.8rem}
 
-/* ── BADGES ─────────────────────────── */
+/* ── BADGES ────────────────────────────────────────────────── */
 .badge{
   display:inline-flex;align-items:center;gap:4px;
   padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600;
@@ -192,7 +192,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .badge-blue{background:rgba(30,139,195,.15);color:var(--accent2)}
 .badge-gray{background:rgba(143,163,190,.1);color:var(--text2)}
 
-/* ── ACTIONS in table ──────────────── */
+/* ── ACTIONS in table ──────────────────────────────────────── */
 .actions{display:flex;gap:4px;align-items:center}
 .act-btn{
   background:transparent;border:1px solid var(--border);
@@ -203,7 +203,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .act-btn.pay:hover{border-color:var(--green);color:var(--green2);background:rgba(39,174,96,.1)}
 .act-btn.del:hover{border-color:var(--red);color:#FF6B6B;background:rgba(231,76,60,.1)}
 
-/* ── MODAL ─────────────────────────── */
+/* ── MODAL ─────────────────────────────────────────────────── */
 .modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.7);
   backdrop-filter:blur(4px);z-index:200;
@@ -230,7 +230,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 }
 .modal-close:hover{background:var(--border);color:var(--text)}
 
-/* ── FORM ──────────────────────────── */
+/* ── FORM ──────────────────────────────────────────────────── */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-grid.full{grid-template-columns:1fr}
 .form-group{display:flex;flex-direction:column;gap:6px}
@@ -248,7 +248,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 .form-divider{grid-column:span 2;border:none;border-top:1px solid var(--border);margin:4px 0}
 
-/* ── ALERT CARDS ───────────────────── */
+/* ── ALERT CARDS ───────────────────────────────────────────── */
 .alert-grid{display:flex;flex-direction:column;gap:10px}
 .alert-card{
   background:var(--surface);border:1px solid var(--border);
@@ -268,7 +268,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .alert-monto{font-size:.9rem;font-weight:700;font-family:var(--mono);color:var(--text)}
 .alert-dias{font-size:.72rem;color:var(--text3);margin-top:2px}
 
-/* ── DASHBOARD WIDGETS ─────────────── */
+/* ── DASHBOARD WIDGETS ─────────────────────────────────────── */
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}
 .dash-widget{
   background:var(--surface);border:1px solid var(--border);
@@ -296,14 +296,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .urgente-monto{font-size:.85rem;font-weight:700;color:var(--text)}
 .urgente-dias{font-size:.7rem;color:var(--red);margin-top:1px}
 
-/* ── EMPTY STATE ───────────────────── */
+/* ── EMPTY STATE ───────────────────────────────────────────── */
 .empty{
   text-align:center;padding:48px;color:var(--text3);
 }
 .empty .ei{font-size:2.5rem;margin-bottom:10px}
 .empty p{font-size:.85rem}
 
-/* ── LOADING ───────────────────────── */
+/* ── LOADING ───────────────────────────────────────────────── */
 .loading{
   display:flex;align-items:center;justify-content:center;
   padding:48px;gap:10px;color:var(--text2);font-size:.85rem;
@@ -320,7 +320,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   40%,80%{transform:translateX(8px)}
 }
 
-/* ── TOAST ─────────────────────────── */
+/* ── TOAST ─────────────────────────────────────────────────── */
 .toast{
   position:fixed;bottom:24px;right:24px;
   background:var(--surface);border:1px solid var(--border);
@@ -334,7 +334,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .toast.success{border-left:4px solid var(--green2)}
 .toast.error{border-left:4px solid var(--red)}
 
-/* ── PAGO MODAL EXTRA ──────────────── */
+/* ── PAGO MODAL EXTRA ──────────────────────────────────────── */
 .info-row{
   background:var(--surface2);border-radius:8px;
   padding:10px 14px;margin-bottom:16px;
@@ -343,7 +343,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .info-row span:first-child{font-size:.78rem;color:var(--text2)}
 .info-row span:last-child{font-size:.85rem;font-weight:700;font-family:var(--mono)}
 
-/* ── CONFIG ────────────────────────── */
+/* ── CONFIG ────────────────────────────────────────────────── */
 .config-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:12px;padding:20px 24px;margin-bottom:16px;
@@ -355,7 +355,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   font-family:var(--mono);font-size:.78rem;width:100%;outline:none;
 }
 
-/* ── NUEVO: SECCIÓN ITEMS ───────────────── */
+/* ── NUEVO: SECCIÓN ITEMS ─────────────────────────────────── */
 .items-section {
   grid-column: span 2;
   margin-top: 8px;
@@ -402,7 +402,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 }
 .items-list { margin-bottom: 8px; }
 
-/* ── MODAL DETALLE ITEMS ───────────── */
+/* ── MODAL DETALLE ITEMS ───────────────────────────────────── */
 .detalle-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
@@ -428,7 +428,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   color: var(--text);
 }
 
-/* ── MOBILE ────────────────────────── */
+/* ── MOBILE ────────────────────────────────────────────────── */
 .mobile-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;
   background:var(--surface);border:1px solid var(--border);
   border-radius:8px;padding:8px;cursor:pointer;color:var(--text);font-size:1.1rem;
@@ -439,17 +439,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .sidebar.open{transform:translateX(0)}
   .main{margin-left:0}
   .topbar{padding-left:56px}
-  .content{padding:16px}
+  .content{padding:12px} /* más compacto */
   .dash-grid{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .form-group.span2{grid-column:span 1}
   .form-divider{grid-column:span 1}
-  .stats-grid{grid-template-columns:1fr 1fr}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px}
   .filters{flex-direction:column;align-items:stretch}
   .filter-search{min-width:unset}
+  .table-wrap table {
+    min-width: 700px;   /* fuerza scroll lateral */
+    font-size: 0.78rem;
+  }
+  .section-hdr {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .section.active {
+    width: 100%;
+  }
 }
 
-/* ── LOGIN SCREEN ──────────────────── */
+/* ── LOGIN SCREEN ──────────────────────────────────────────── */
 #login-screen{
   position:fixed;inset:0;
   background:linear-gradient(135deg,#0F1419 0%,#1A2A3A 50%,#0F1419 100%);
@@ -578,7 +589,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="nav-item" onclick="goTo(event, 'facturas')">
       <span class="icon">📋</span> Facturas
-      <span class="nav-badge" id="badge-facturas">0</span>
+      <!-- badge eliminado -->
     </div>
     <div class="nav-item" onclick="goTo(event, 'pendientes')">
       <span class="icon">⏳</span> Pendientes
@@ -1050,9 +1061,9 @@ let allProveedores = [];
 let editId = null;
 let pagoId = null;
 let editProvId = null;
-let tempItems = []; // NUEVO: items actuales del formulario
+let tempItems = []; // items actuales del formulario
 
-// ── Supabase proveedores helpers (sin cambios) ──────────
+// ── Supabase proveedores helpers ──────────────────────────
 async function sbGetProveedores() {
   const res = await fetch(`${SB_URL}/rest/v1/proveedores?order=nombre.asc`, { headers: SB_HEADERS });
   if (!res.ok) throw new Error(await res.text());
@@ -1118,13 +1129,13 @@ async function sbDelete(id) {
   if (!res.ok) throw new Error(await res.text());
 }
 
-// ── Navigation (corregido: recibe event) ──────────────────
-function goTo(event, section) {
+// ── Navigation ────────────────────────────────────────────────
+function goTo(e, section) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('section-'+section).classList.add('active');
   document.getElementById('page-title').textContent = titles[section] || section;
-  event.currentTarget.classList.add('active');
+  e.currentTarget.classList.add('active');
   document.querySelector('.sidebar').classList.remove('open');
   if (section === 'facturas')    renderFacturas();
   if (section === 'pendientes')  renderPendientes();
@@ -1169,7 +1180,7 @@ function calcSaldo(f) {
   return saldo > 0 ? saldo : f.monto;
 }
 
-// ── Dashboard (sin cambios) ─────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────
 function updateDashboard() {
   const hoy = new Date();
   let totalPend = 0, totalPag = 0, countPend = 0, countPag = 0;
@@ -1197,7 +1208,7 @@ function updateDashboard() {
   document.getElementById('stat-total').textContent      = allFacturas.length;
   document.getElementById('stat-count-pend').textContent = countPend + ' facturas pendientes';
   document.getElementById('stat-count-pag').textContent  = countPag + ' facturas pagadas';
-  document.getElementById('badge-facturas').textContent  = countPend;
+  // Badge facturas eliminado
   document.getElementById('badge-pendientes').textContent = countPend;
   document.getElementById('badge-alertas').textContent   = urgentes.filter(f=>f.dias>30).length;
   document.getElementById('badge-parciales').textContent = allFacturas.filter(f=>f.estado!=='PAGADA'&&f.total_abonado>0).length;
@@ -1241,7 +1252,7 @@ function populateFilters() {
   });
 }
 
-// ── Tablas (modificadas para incluir botón detalle) ────
+// ── Pendientes ────────────────────────────────────────────
 function renderPendientes() {
   const hoy = new Date();
   const pend = allFacturas.filter(f => f.estado !== 'PAGADA')
@@ -1273,6 +1284,7 @@ function renderPendientes() {
   }).join('');
 }
 
+// ── Todas las Facturas ────────────────────────────────────
 function renderFacturas() {
   const search = document.getElementById('search-facturas').value.toLowerCase();
   const prov   = document.getElementById('filter-proveedor').value;
@@ -1327,6 +1339,7 @@ function renderFacturas() {
   }).join('');
 }
 
+// ── Alertas ───────────────────────────────────────────────
 function renderAlertas() {
   const hoy = new Date();
   const venc = allFacturas.filter(f =>
@@ -1358,6 +1371,7 @@ function renderAlertas() {
     : '<div class="empty"><div class="ei">✅</div><p>No hay facturas vencidas. ¡Todo al día!</p></div>';
 }
 
+// ── Parciales ─────────────────────────────────────────────
 function renderParciales() {
   const parc = allFacturas.filter(f => f.estado !== 'PAGADA' && f.total_abonado > 0);
   document.getElementById('parciales-count').textContent = `${parc.length} factura(s) con pago parcial`;
@@ -1382,6 +1396,7 @@ function renderParciales() {
     : `<tr><td colspan="8"><div class="empty"><div class="ei">💳</div><p>No hay pagos parciales</p></div></td></tr>`;
 }
 
+// ── Proveedores ───────────────────────────────────────────
 function renderProveedores() {
   const stats = {};
   allFacturas.forEach(f => {
@@ -1432,7 +1447,7 @@ function renderProveedores() {
     `<tr><td colspan="7"><div class="empty"><div class="ei">🏢</div><p>Sin proveedores. Agregá uno con el botón +</p></div></td></tr>`;
 }
 
-// ── CRUD Proveedores (sin cambios) ──────────────────────
+// ── CRUD Proveedores ──────────────────────────────────────
 function openNuevoProv() {
   editProvId = null;
   document.getElementById('modal-prov-form-title').textContent = '+ Nuevo Proveedor';
@@ -1583,7 +1598,7 @@ function togglePagoFields() {
   document.getElementById('f-group-fecha-pago').style.display = ok ? 'flex' : 'none';
 }
 
-// ── NUEVO: manejo de items en el formulario ──────────────
+// ── Items del formulario ─────────────────────────────────
 function addItemToForm() {
   const desc = document.getElementById('item-desc').value.trim();
   const cant = parseFloat(document.getElementById('item-cant').value) || 0;
@@ -1643,7 +1658,7 @@ function openEdit(id) {
   openModal('modal-factura');
 }
 
-// ── Submit Factura (modificado para incluir items) ──────
+// ── Submit Factura (incluye items) ───────────────────────
 async function submitFactura(e) {
   e.preventDefault();
   const monto = parseFloat(document.getElementById('f-monto').value) || 0;
@@ -1660,7 +1675,7 @@ async function submitFactura(e) {
     monto_original: monto,
     total_abonado:  estado === 'PAGADA' && abonado === 0 ? monto : abonado,
     observaciones:  document.getElementById('f-obs').value.trim() || null,
-    items:          tempItems.length > 0 ? tempItems : []  // NUEVO
+    items:          tempItems.length > 0 ? tempItems : []
   };
 
   const btn = document.getElementById('btn-submit-factura');
@@ -1679,7 +1694,7 @@ async function submitFactura(e) {
   btn.disabled = false;
 }
 
-// ── Submit Pago (sin cambios) ────────────────────────────
+// ── Submit Pago ───────────────────────────────────────────
 async function submitPago() {
   const fecha = document.getElementById('pago-fecha').value;
   const monto = parseFloat(document.getElementById('pago-monto').value) || 0;
@@ -1721,7 +1736,7 @@ async function deleteFact(id) {
   } catch(err) { toast('Error: ' + err.message, 'error'); }
 }
 
-// ── NUEVO: Modal de detalle de items ─────────────────────
+// ── Modal de detalle de items ────────────────────────────
 function openDetalle(id) {
   const f = allFacturas.find(x => x.id === id);
   if (!f) return;
@@ -1777,7 +1792,7 @@ function toast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── Config section (no usada, mantenida) ────────────────
+// ── Config (placeholder) ─────────────────────────────────
 function saveApiUrl() {}
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
