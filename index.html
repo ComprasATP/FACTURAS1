@@ -162,7 +162,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* ── TABLE ─────────────────────────────────────────────────── */
 .table-wrap{
   background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;overflow-x:auto; /* Scroll horizontal en móvil */
+  border-radius:12px;overflow-x:auto;
 }
 .table-wrap table{width:100%;border-collapse:collapse}
 .table-wrap th{
@@ -355,7 +355,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   font-family:var(--mono);font-size:.78rem;width:100%;outline:none;
 }
 
-/* ── NUEVO: SECCIÓN ITEMS ─────────────────────────────────── */
+/* ── ITEMS ─────────────────────────────────────────────────── */
 .items-section {
   grid-column: span 2;
   margin-top: 8px;
@@ -439,7 +439,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .sidebar.open{transform:translateX(0)}
   .main{margin-left:0}
   .topbar{padding-left:56px}
-  .content{padding:12px} /* más compacto */
+  .content{padding:12px}
   .dash-grid{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .form-group.span2{grid-column:span 1}
@@ -448,7 +448,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .filters{flex-direction:column;align-items:stretch}
   .filter-search{min-width:unset}
   .table-wrap table {
-    min-width: 700px;   /* fuerza scroll lateral */
+    min-width: 700px;
     font-size: 0.78rem;
   }
   .section-hdr {
@@ -527,7 +527,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   text-align:center;margin-top:20px;
   font-size:.72rem;color:var(--text3);
 }
-/* PWA install banner */
 #pwa-banner{
   position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
   background:var(--surface);border:1px solid var(--accent);
@@ -589,7 +588,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="nav-item" onclick="goTo(event, 'facturas')">
       <span class="icon">📋</span> Facturas
-      <!-- badge eliminado -->
     </div>
     <div class="nav-item" onclick="goTo(event, 'pendientes')">
       <span class="icon">⏳</span> Pendientes
@@ -910,10 +908,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <textarea id="f-obs" placeholder="Notas adicionales..."></textarea>
         </div>
 
-        <!-- NUEVO: Bloque de Items -->
         <div class="items-section">
           <h4>📦 Items de la Factura</h4>
-          <div class="items-list" id="items-list"><!-- Se llena dinámicamente --></div>
+          <div class="items-list" id="items-list"></div>
           <div class="item-row">
             <input type="text" id="item-desc" placeholder="Descripción">
             <input type="number" id="item-cant" placeholder="Cant." class="cantidad" value="1" min="1">
@@ -974,7 +971,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<!-- ═══ MODAL: DETALLE FACTURA (Items) ─ NUEVO ──────── -->
+<!-- ═══ MODAL: DETALLE FACTURA (Items) ═══ -->
 <div class="modal-overlay" id="modal-detalle">
   <div class="modal" style="max-width:650px;width:95vw">
     <div class="modal-hdr">
@@ -1061,7 +1058,7 @@ let allProveedores = [];
 let editId = null;
 let pagoId = null;
 let editProvId = null;
-let tempItems = []; // items actuales del formulario
+let tempItems = [];
 
 // ── Supabase proveedores helpers ──────────────────────────
 async function sbGetProveedores() {
@@ -1208,7 +1205,6 @@ function updateDashboard() {
   document.getElementById('stat-total').textContent      = allFacturas.length;
   document.getElementById('stat-count-pend').textContent = countPend + ' facturas pendientes';
   document.getElementById('stat-count-pag').textContent  = countPag + ' facturas pagadas';
-  // Badge facturas eliminado
   document.getElementById('badge-pendientes').textContent = countPend;
   document.getElementById('badge-alertas').textContent   = urgentes.filter(f=>f.dias>30).length;
   document.getElementById('badge-parciales').textContent = allFacturas.filter(f=>f.estado!=='PAGADA'&&f.total_abonado>0).length;
@@ -1694,6 +1690,38 @@ async function submitFactura(e) {
   btn.disabled = false;
 }
 
+// ═══════════════════════════════════════════════════════════
+// ── ABRIR MODAL DE PAGO (FUNCIÓN AGREGADA — FIX) ───────────
+// ═══════════════════════════════════════════════════════════
+function openPago(id) {
+  const f = allFacturas.find(x => x.id === id);
+  if (!f) {
+    toast('Factura no encontrada', 'error');
+    return;
+  }
+  if (f.estado === 'PAGADA') {
+    toast('Esta factura ya está pagada', 'error');
+    return;
+  }
+
+  pagoId = id;
+  const saldo = calcSaldo(f);
+
+  // Cargar info de la factura en el modal
+  document.getElementById('pago-nro').textContent   = f.nro_factura;
+  document.getElementById('pago-prov').textContent  = f.proveedor;
+  document.getElementById('pago-saldo').textContent = fmt(saldo);
+
+  // Precargar fecha de hoy y monto sugerido (saldo completo)
+  document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pago-monto').value = saldo.toFixed(2);
+  document.getElementById('pago-monto').max   = saldo;
+  document.getElementById('pago-forma').value = f.forma_pago || '';
+
+  // Abrir modal
+  document.getElementById('modal-pago').classList.add('open');
+}
+
 // ── Submit Pago ───────────────────────────────────────────
 async function submitPago() {
   const fecha = document.getElementById('pago-fecha').value;
@@ -1718,6 +1746,12 @@ async function submitPago() {
     });
     toast('Pago registrado ✅', 'success');
     await loadData();
+    // Refrescar la vista activa
+    const activeSection = document.querySelector('.section.active')?.id;
+    if (activeSection === 'section-facturas')   renderFacturas();
+    if (activeSection === 'section-pendientes') renderPendientes();
+    if (activeSection === 'section-alertas')    renderAlertas();
+    if (activeSection === 'section-parciales')  renderParciales();
     closeModal('modal-pago');
   } catch(err) {
     toast('Error: ' + err.message, 'error');
@@ -1877,12 +1911,6 @@ function checkPWA() {
 window.addEventListener('appinstalled', () => {
   document.getElementById('pwa-banner').classList.add('hidden');
   toast('✅ FacturasPRO instalada como app', 'success');
-});
-
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
 });
 
 document.addEventListener('DOMContentLoaded', () => {
